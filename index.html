@@ -198,6 +198,12 @@
   .steps{margin:8px 0 0; padding-left:1.3em}
   .steps li{margin:4px 0}
 
+  /* ---------- 앱 안 브라우저 안내 ---------- */
+  #inapp{display:none; background:#2B2622; color:#fff; padding:12px 16px}
+  #inapp.show{display:block}
+  #inapp .in{max-width:640px; margin:0 auto; display:flex; align-items:center; gap:10px; font-size:.9rem; font-weight:600; line-height:1.35}
+  #inapp button{flex:none; border:0; border-radius:12px; background:var(--acc); color:#fff; font-weight:800; padding:10px 14px; min-height:44px}
+
   /* ---------- 로그인 ---------- */
   body.login nav, body.login #streakChip{display:none}
   body.login main{padding-bottom:40px}
@@ -233,6 +239,7 @@
 </head>
 <body>
 <header><div class="in"><h1>대롱<svg class="sq" viewBox="0 0 76 64" aria-label="다람쥐" role="img"><path d="M50 60 C74 60 80 36 70 20 C63 9 50 10 49 21 C56 19 63 26 61 36 C59 45 52 50 47 55 Z" fill="#A9592A"/><path d="M57 25 C63 29 63 38 59 45" fill="none" stroke="#D8935A" stroke-width="2.4" stroke-linecap="round"/><ellipse cx="17" cy="17" rx="6.5" ry="9" transform="rotate(-18 17 17)" fill="#B9692F"/><ellipse cx="47" cy="17" rx="6.5" ry="9" transform="rotate(18 47 17)" fill="#B9692F"/><ellipse cx="17.5" cy="18.5" rx="3.2" ry="5.2" transform="rotate(-18 17.5 18.5)" fill="#F4B3A3"/><ellipse cx="46.5" cy="18.5" rx="3.2" ry="5.2" transform="rotate(18 46.5 18.5)" fill="#F4B3A3"/><path d="M13 9 L14 3 L17 8 Z M51 9 L50 3 L47 8 Z" fill="#8F4A22"/><ellipse cx="32" cy="38" rx="22" ry="20" fill="#CB7D3D"/><path d="M32 18.5 C29.5 23 29.5 27 32 30 C34.5 27 34.5 23 32 18.5 Z" fill="#A8592A" opacity=".5"/><ellipse cx="32" cy="47" rx="14.5" ry="10.5" fill="#F7E6CC"/><circle cx="22.5" cy="36" r="4.2" fill="#2B2622"/><circle cx="41.5" cy="36" r="4.2" fill="#2B2622"/><circle cx="24" cy="34.4" r="1.5" fill="#fff"/><circle cx="43" cy="34.4" r="1.5" fill="#fff"/><ellipse cx="15" cy="45" rx="4.6" ry="3.2" fill="#F08E7A" opacity=".75"/><ellipse cx="49" cy="45" rx="4.6" ry="3.2" fill="#F08E7A" opacity=".75"/><ellipse cx="32" cy="42" rx="2.8" ry="2" fill="#5A3420"/><path d="M28.5 45 Q30.5 47.5 32 45 Q33.5 47.5 35.5 45" fill="none" stroke="#5A3420" stroke-width="1.4" stroke-linecap="round"/><rect x="30.4" y="46.6" width="3.2" height="3.6" rx="1" fill="#fff" stroke="#E8D5BC" stroke-width=".6"/></svg>의 영어교실</h1><span class="chip" id="streakChip" hidden></span></div></header>
+<div id="inapp"><div class="in"><span>📢 이 화면에서는 소리가 안 나와요.<br>크롬에서 열어 주세요.</span><button data-act="openChrome">크롬으로 열기</button></div></div>
 <main id="main"></main>
 <nav><div class="in">
   <button data-act="go" data-view="home"><span class="ic">🏠</span>오늘</button>
@@ -254,6 +261,20 @@ const IN_GAS = !!(window.google && google.script && google.script.run);
 const LEVELS = { 1: '기초', 2: '초급', 3: '중급' };
 const TYPE_KO = { word: '단어', sentence: '문장', dialogue: '대화' };
 const WEEK = '일월화수목금토';
+
+/* ---------------- 카톡 등 앱 안에서 열렸을 때 → 크롬으로 ---------------- */
+const UA = navigator.userAgent || '';
+const IS_ANDROID = /Android/i.test(UA);
+const IN_KAKAO = /KAKAOTALK/i.test(UA);
+const IN_APP = IN_KAKAO || /NAVER\(inapp|; wv\)|BAND\/|Instagram|FBAN|FBAV|Line\//i.test(UA);
+function openInChrome() {
+  const url = location.href;
+  if (IN_KAKAO) { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url); return; }
+  if (IS_ANDROID) { location.href = 'intent://' + url.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;end'; return; }
+  toast('화면 아래쪽 메뉴에서 "Safari로 열기"를 눌러 주세요.', 5000);
+}
+if (!IN_GAS && (IN_APP || !('speechSynthesis' in window))) document.getElementById('inapp').classList.add('show');
+if (!IN_GAS && IN_KAKAO) openInChrome();   // 카톡에서 열면 자동으로 크롬(기본 브라우저)으로
 
 /* ---------------- 서버 연결 ---------------- */
 /* ---------------- 로그인 정보 (이 기기에 기억) ---------------- */
@@ -370,7 +391,10 @@ function utter(text, alt, slow) {
   return u;
 }
 function hasTTS() {
-  if (!('speechSynthesis' in window)) { toast('이 기기에서는 소리 듣기를 지원하지 않아요.'); return false; }
+  if (!('speechSynthesis' in window)) {
+    toast(IN_APP ? '카톡 같은 앱 안에서는 소리가 안 나와요. 위의 "크롬으로 열기"를 눌러 주세요.' : '이 기기에서는 소리 듣기를 지원하지 않아요.', 4500);
+    return false;
+  }
   return true;
 }
 function stopSpeech() { try { if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel(); } catch (e) {} }
@@ -928,6 +952,7 @@ document.addEventListener('click', function (e) {
     case 'pinDel': S.pin = S.pin.slice(0, -1); S.pinMsg = ''; render(); break;
     case 'pinBack': S.pickUser = null; S.pin = ''; S.pinMsg = ''; render(); break;
     case 'logout': logout(); break;
+    case 'openChrome': openInChrome(); break;
   }
 });
 

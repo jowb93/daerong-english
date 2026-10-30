@@ -1,5 +1,5 @@
 // 앱 화면을 휴대폰에 저장해 두는 작은 도우미 (새 버전이 있으면 항상 새 것을 먼저 받아요)
-const CACHE = 'daerong-english-v2';
+const CACHE = 'daerong-english-v3';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).catch(() => {}));
